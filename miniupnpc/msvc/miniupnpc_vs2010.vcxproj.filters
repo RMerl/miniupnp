@@ -40,6 +40,9 @@
     <ClCompile Include="..\upnperrors.c">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="..\addr_is_reserved.c">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\connecthostport.h">
@@ -96,6 +99,15 @@
     <ClInclude Include="..\miniwget_private.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="..\addr_is_reserved.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\win32_snprintf.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\rc_version.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="sources">
@@ -112,5 +124,10 @@
     <None Include="genminiupnpcstrings.vbs">
       <Filter>scripts</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="../miniupnpc.rc">
+      <Filter>Fichiers de ressources</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-/* $Id: ipfrdr.c,v 1.18 2016/02/12 14:12:25 nanard Exp $ */
+/* $Id: ipfrdr.c,v 1.20 2020/05/10 22:26:04 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
  * (c) 2007 Darren Reed
@@ -59,7 +59,7 @@ struct file;
 #include <string.h>
 #include <unistd.h>
 
-#include "../config.h"
+#include "config.h"
 #include "netinet/ipl.h"
 #include "netinet/ip_compat.h"
 #include "netinet/ip_fil.h"
@@ -804,7 +804,7 @@ get_portmappings_in_range(unsigned short startport, unsigned short endport,
 	return array;
 }
 
-/* update the port mapping internal port, decription and timestamp */
+/* update the port mapping internal port, description and timestamp */
 int
 update_portmapping(const char * ifname, unsigned short eport, int proto,
                    unsigned short iport, const char * desc,
@@ -817,7 +817,7 @@ update_portmapping(const char * ifname, unsigned short eport, int proto,
 	return -1;
 }
 
-/* update the port mapping decription and timestamp */
+/* update the port mapping description and timestamp */
 int
 update_portmapping_desc_timestamp(const char * ifname,
                    unsigned short eport, int proto,

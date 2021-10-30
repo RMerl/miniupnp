@@ -1,7 +1,7 @@
 /* $Id: commonrdr.h,v 1.11 2019/10/02 22:12:02 nanard Exp $ */
 /* MiniUPnP project
- * (c) 2006-2019 Thomas Bernard
- * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
+ * (c) 2006-2020 Thomas Bernard
+ * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 #ifndef COMMONRDR_H_INCLUDED
@@ -18,6 +18,11 @@ init_redirect(void);
 
 void
 shutdown_redirect(void);
+
+/* get_redirect_rule_count()
+ * return value : -1 for error or the number of redirection rules */
+int
+get_redirect_rule_count(const char * ifname);
 
 /* get_redirect_rule() gets internal IP and port from
  * interface, external port and protocol
@@ -52,19 +57,19 @@ unsigned short *
 get_portmappings_in_range(unsigned short startport, unsigned short endport,
                           int proto, unsigned int * number);
 
-/* update the port mapping internal port, decription and timestamp */
+/* update the port mapping internal port, description and timestamp */
 int
 update_portmapping(const char * ifname, unsigned short eport, int proto,
                    unsigned short iport, const char * desc,
                    unsigned int timestamp);
 
-/* update the port mapping decription and timestamp */
+/* update the port mapping description and timestamp */
 int
 update_portmapping_desc_timestamp(const char * ifname,
                    unsigned short eport, int proto,
                    const char * desc, unsigned int timestamp);
 
-#ifdef USE_NFTABLES
+#if defined(USE_NETFILTER)
 /*
  * only provided by nftables implementation at the moment.
  * Should be implemented for iptables too, for consistency

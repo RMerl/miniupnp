@@ -1,9 +1,11 @@
-/*
+/* $Id: nftnlrdr.c,v 1.10 2020/11/11 12:08:43 nanard Exp $
  * vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
- * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
+ * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * (c) 2015 Tomofumi Hayashi
+ * (c) 2019 Sven Auhagen
  * (c) 2019 Paul Chambers
+ * (c) 2020 Thomas Bernard
  *
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution.
@@ -13,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -38,8 +40,8 @@
 
 #include "tiny_nf_nat.h"
 
+#include "config.h"
 #include "../macros.h"
-#include "../config.h"
 #include "../commonrdr.h"
 #include "nftnlrdr.h"
 
@@ -159,7 +161,8 @@ shutdown_redirect(void)
 int
 set_rdr_name(rdr_name_type param, const char *string)
 {
-	if (string == NULL || strlen(string) > 30) {
+	if (string == NULL || strlen(string) > 30 || string[0] == '\0') {
+		syslog(LOG_ERR, "%s(): invalid string argument '%s'", "set_rdr_name", string);
 		return -1;
 	}
 	switch (param) {
@@ -176,7 +179,7 @@ set_rdr_name(rdr_name_type param, const char *string)
 		nft_forward_chain = string;
 		break;
 	default:
-		syslog(LOG_ERR, "tried to set invalid string parameter: %d", param);
+		syslog(LOG_ERR, "%s(): tried to set invalid string parameter: %d", "set_rdr_name", param);
 		return -2;
 	}
 	return 0;
@@ -188,10 +191,13 @@ get_timestamp(unsigned short eport, int proto)
 	struct timestamp_entry * e;
 	e = timestamp_list;
 	while(e) {
-		if(e->eport == eport && e->protocol == (short)proto)
+		if(e->eport == eport && e->protocol == (short)proto) {
+			syslog(LOG_DEBUG, "timestamp entry found (%hu, %d, %u)", eport, proto, e->timestamp);
 			return e->timestamp;
+		}
 		e = e->next;
 	}
+	syslog(LOG_WARNING, "get_timestamp(%hu, %d) no entry found", eport, proto);
 	return 0;
 }
 
@@ -204,6 +210,7 @@ remove_timestamp_entry(unsigned short eport, int proto)
 	e = *p;
 	while(e) {
 		if(e->eport == eport && e->protocol == (short)proto) {
+			syslog(LOG_DEBUG, "timestamp entry removed (%hu, %d, %u)", eport, proto, e->timestamp);
 			/* remove the entry */
 			*p = e->next;
 			free(e);
@@ -212,6 +219,7 @@ remove_timestamp_entry(unsigned short eport, int proto)
 		p = &(e->next);
 		e = *p;
 	}
+	syslog(LOG_WARNING, "remove_timestamp_entry(%hu, %d) no entry found", eport, proto);
 }
 
 static void
@@ -226,6 +234,7 @@ add_timestamp_entry(unsigned short eport, int proto, unsigned timestamp)
 		tmp->eport = eport;
 		tmp->protocol = (short)proto;
 		timestamp_list = tmp;
+		syslog(LOG_DEBUG, "timestamp entry added (%hu, %d, %u)", eport, proto, timestamp);
 	}
 	else
 	{
@@ -240,9 +249,9 @@ add_redirect_rule2(const char * ifname,
 		   const char * iaddr, unsigned short iport, int proto,
 		   const char * desc, unsigned int timestamp)
 {
+	int ret;
 	struct nftnl_rule *r;
 	UNUSED(rhost);
-	UNUSED(timestamp);
 
 	d_printf(("add redirect rule2(%s, %s, %u, %s, %u, %d, %s)!\n",
 	          ifname, rhost, eport, iaddr, iport, proto, desc));
@@ -251,7 +260,11 @@ add_redirect_rule2(const char * ifname,
 	                  0, eport,
 	                  inet_addr(iaddr), iport,  desc, NULL);
 
-	return nft_send_rule(r, NFT_MSG_NEWRULE, RULE_CHAIN_REDIRECT);
+	ret = nft_send_rule(r, NFT_MSG_NEWRULE, RULE_CHAIN_REDIRECT);
+	if (ret >= 0) {
+		add_timestamp_entry(eport, proto, timestamp);
+	}
+	return ret;
 }
 
 /*
@@ -298,7 +311,7 @@ add_filter_rule2(const char * ifname,
 	d_printf(("add_filter_rule2(%s, %s, %s, %d, %d, %d, %s)\n",
 	          ifname, rhost, iaddr, eport, iport, proto, desc));
 
-	if (rhost != NULL && strcmp(rhost, "") != 0) {
+	if (rhost != NULL && strcmp(rhost, "") != 0 && strcmp(rhost, "*") != 0) {
 		rhost_addr = inet_addr(rhost);
 	}
 	r = rule_set_filter(NFPROTO_INET, ifname, proto,
@@ -436,16 +449,14 @@ get_peer_rule_by_index(int index,
 		       unsigned int * timestamp,
 		       u_int64_t * packets, u_int64_t * bytes)
 {
-	struct in_addr addr;
-	char *addr_str;
 	rule_t *r;
-	UNUSED(timestamp);
+	int i = 0;
 
 	d_printf(("get_peer_rule_by_index()\n"));
 	refresh_nft_cache_peer();
 
 	LIST_FOREACH(r, &head_peer, entry) {
-		if (r->index == index) {
+		if (i++ == index) {
 			if (ifname != NULL) {
 				if_indextoname(r->ingress_ifidx, ifname);
 			}
@@ -455,9 +466,10 @@ get_peer_rule_by_index(int index,
 			}
 
 			if (iaddr != NULL) {
-				addr.s_addr = r->iaddr;
-				addr_str = inet_ntoa(addr);
-				strncpy(iaddr , addr_str, iaddrlen);
+				if (inet_ntop(AF_INET, &r->iaddr, iaddr, iaddrlen) == NULL) {
+					syslog(LOG_ERR, "%s: inet_ntop: %m",
+					       "get_peer_rule_by_index");
+				}
 			}
 
 			if (iport != NULL) {
@@ -469,9 +481,14 @@ get_peer_rule_by_index(int index,
 			}
 
 			if (rhost != NULL) {
-				addr.s_addr = r->rhost;
-				addr_str = inet_ntoa(addr);
-				strncpy(iaddr , addr_str, rhostlen);
+				if (r->rhost) {
+					if (inet_ntop(AF_INET, &r->rhost, rhost, rhostlen) == NULL) {
+						syslog(LOG_ERR, "%s: inet_ntop: %m",
+						       "get_peer_rule_by_index");
+					}
+				} else {
+					rhost[0] = '\0';
+				}
 			}
 
 			if (rport != NULL) {
@@ -482,13 +499,16 @@ get_peer_rule_by_index(int index,
 				strncpy(desc, r->desc, desclen);
 			}
 
-			if (packets || bytes) {
-				if (packets)
-					*packets = r->packets;
-				if (bytes)
-					*bytes = r->bytes;
+			if (packets) {
+				*packets = r->packets;
+			}
+			if (bytes) {
+				*bytes = r->bytes;
 			}
 
+			if (timestamp) {
+				*timestamp = get_timestamp(r->eport, r->proto);
+			}
 			/*
 			 * TODO: Implement counter in case of add {nat,filter}
 			 */
@@ -519,6 +539,22 @@ get_redirect_rule(const char * ifname, unsigned short eport, int proto,
 	                             timestamp, packets, bytes);
 }
 
+/* get_redirect_rule_count()
+ * return value : -1 for error or the number of redirection rules */
+int
+get_redirect_rule_count(const char * ifname)
+{
+	rule_t *r;
+	int n = 0;
+	UNUSED(ifname);
+
+	refresh_nft_cache_redirect();
+	LIST_FOREACH(r, &head_redirect, entry) {
+		n++;
+	}
+	return n;
+}
+
 /*
  * get_redirect_rule_by_index()
  * return -1 when the rule was not found
@@ -532,16 +568,14 @@ get_redirect_rule_by_index(int index,
 			   unsigned int * timestamp,
 			   u_int64_t * packets, u_int64_t * bytes)
 {
-	struct in_addr addr;
-	char *addr_str;
 	rule_t *r;
-	UNUSED(timestamp);
+	int i = 0;
 
 	d_printf(("get_redirect_rule_by_index()\n"));
 	refresh_nft_cache_redirect();
 
 	LIST_FOREACH(r, &head_redirect, entry) {
-		if (r->index == index) {
+		if (i++ == index) {
 			if (ifname != NULL) {
 				if_indextoname(r->ingress_ifidx, ifname);
 			}
@@ -551,9 +585,10 @@ get_redirect_rule_by_index(int index,
 			}
 
 			if (iaddr != NULL) {
-				addr.s_addr = r->iaddr;
-				addr_str = inet_ntoa(addr);
-				strncpy(iaddr , addr_str, iaddrlen);
+				if (inet_ntop(AF_INET, &r->iaddr, iaddr, iaddrlen) == NULL) {
+					syslog(LOG_ERR, "%s: inet_ntop: %m",
+					       "get_redirect_rule_by_index");
+				}
 			}
 
 			if (iport != NULL) {
@@ -565,9 +600,14 @@ get_redirect_rule_by_index(int index,
 			}
 
 			if (rhost != NULL) {
-				addr.s_addr = r->rhost;
-				addr_str = inet_ntoa(addr);
-				strncpy(iaddr , addr_str, rhostlen);
+				if (r->rhost) {
+					if (inet_ntop(AF_INET, &r->rhost, rhost, rhostlen) == NULL) {
+						syslog(LOG_ERR, "%s: inet_ntop: %m",
+						       "get_redirect_rule_by_index");
+					}
+				} else {
+					rhost[0] = '\0';
+				}
 			}
 
 			if (desc != NULL && r->desc) {
@@ -612,8 +652,6 @@ get_nat_redirect_rule(const char * nat_chain_name, const char * ifname,
 	struct in_addr addr;
 	UNUSED(nat_chain_name);
 	UNUSED(ifname);
-	UNUSED(iaddrlen);
-	UNUSED(timestamp);
 	UNUSED(packets);
 	UNUSED(bytes);
 	UNUSED(rhost);
@@ -625,9 +663,12 @@ get_nat_redirect_rule(const char * nat_chain_name, const char * ifname,
 		if (p->proto == proto &&
 		    p->eport == eport) {
 
-			if (p->iaddr) {
+			if (p->iaddr && iaddr) {
 				addr.s_addr = p->iaddr;
-				inet_ntop(AF_INET, &addr, iaddr, INET_ADDRSTRLEN);
+				if (inet_ntop(AF_INET, &addr, iaddr, iaddrlen) == NULL) {
+					syslog(LOG_ERR, "%s: inet_ntop: %m",
+					       "get_nat_redirect_rule");
+				}
 			}
 
 			if (desc != NULL && p->desc) {

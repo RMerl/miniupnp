@@ -1,4 +1,5 @@
 *.o
+*.d
 *.bak
 config.h
 ipfw/testipfwrdr
@@ -26,3 +27,11 @@ pf/testpfpinhole
 netfilter/test_nfct_get
 testminissdp
 dox/
+bsdmake.inc
+upnpstun
+Makefile
+config.mk
+netfilter_nft/testnftnlrdr
+netfilter_nft/testnftpinhole
+netfilter_nft/test_nfct_get
+.configure.cache

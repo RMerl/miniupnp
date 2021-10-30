@@ -1,4 +1,91 @@
-$Id: Changelog.txt,v 1.457 2019/12/23 23:41:29 nanard Exp $
+$Id: Changelog.txt,v 1.480 2021/08/21 08:34:57 nanard Exp $
+
+VERSION 2.2.3 : released on 2021/08/21
+
+2021/08/18:
+  lease file for IPv6 pinholes
+
+2021/08/11:
+  Detect Microsoft User-Agent: and force IGDv1 in that case
+
+2021/06/18:
+  Fails on config parsing and init errors.
+  print errors during init to both syslog and stderr.
+
+2021/05/22:
+  dynamically retrieve `uname -r`
+
+VERSION 2.2.2 : released on 2021/05/13
+
+2021/04/22:
+  Add SO_REUSEPORT option for SSDP receive sockets
+
+2021/03/31:
+  GetExternalIPAddress returns empty string when the External IP address can
+    not be retrieved.
+
+2021/02/26:
+  iptables_removeall.sh: fix the cleanup of PREROUTING mangle chain
+
+VERSION 2.2.1 : released on 2020/12/20
+ (only minor build corrections)
+
+VERSION 2.2.0 : released on 2020/10/31
+
+2020/10/30:
+  OpenBSD: portinuse.c compatible with OpenBSD 5.5+
+
+2020/10/26:
+  Improve AddAnyPortMapping port selection
+
+2020/10/22:
+  netfilter_nft: fix rule-cache update when using the same chain name in
+    both tables.
+
+2020/06/20:
+  -v/-vv to output more log (LOG_INFO / LOG_DEBUG)
+  AddAnyPortMapping() tries all possible ports
+
+2020/06/10:
+  improvements and bug fixes in netfilter_nft/nftnlrdr_misc.c
+
+2020/06/05:
+  fix handling of ipv4 M-SEARCH received on ipv6 sockets
+  numerous fixes in linux/nftables implementation
+
+2020/06/03:
+  configure --disable-fork to disable going to background
+  improve upnp_get_portmapping_number_of_entries()
+
+2020/05/30:
+  "IGD2 Port Triggering" pf implementation (adding a nat rule)
+
+2020/05/07:
+  Linux: use libcap or libcap-ng to drop unnecessary capabilities
+
+2020/05/04:
+  Move configuration detection from Makefiles to configure (was genconfig.sh)
+  update linux Makefiles
+
+2020/04/29:
+  fix for bridges
+
+2020/04/21:
+  Remove FW API detecting code from Makefile (BSD). generate bsdmake.inc
+  netfilter: addmasqueraderule() even if internal/external ports are the same
+  improve error and debug log in upnpstun.c
+
+2020/04/20:
+  Fix "IGD2 Port Triggering" in update_portmapping()
+
+2020/04/12:
+  pf: disabled setting dst address in rule by default
+
+2020/04/09:
+  Option to disable IPv6 at runtime : -4 / ipv6_disable=yes
+
+2020/03/29:
+  Fix FreeBSD build
 
 2019/12/18:
   Fix PCPSendUnsolicitedAnnounce() when IPv6 is not available

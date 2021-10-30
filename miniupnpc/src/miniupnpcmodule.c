@@ -1,14 +1,14 @@
-/* $Id: miniupnpcmodule.c,v 1.34 2019/05/20 19:07:16 nanard Exp $*/
+/* $Id: miniupnpcmodule.c,v 1.37 2021/09/28 21:38:30 nanard Exp $*/
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * Project : miniupnp
  * Author : Thomas BERNARD
  * website : https://miniupnp.tuxfamily.org/
- * copyright (c) 2007-2019 Thomas Bernard
+ * copyright (c) 2007-2021 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENCE file. */
 #include <Python.h>
 #define MINIUPNP_STATICLIB
-#include "structmember.h"
+#include <structmember.h>
 #include "miniupnpc.h"
 #include "upnpcommands.h"
 #include "upnperrors.h"
@@ -122,9 +122,9 @@ UPnPObject_dealloc(UPnPObject *self)
 static PyObject *
 UPnP_discover(UPnPObject *self)
 {
-	struct UPNPDev * dev;
-	int i;
+	int error = 0;
 	PyObject *res = NULL;
+
 	if(self->devlist)
 	{
 		freeUPNPDevlist(self->devlist);
@@ -137,13 +137,21 @@ UPnP_discover(UPnPObject *self)
 	                             (int)self->localport,
 	                             0/*ip v6*/,
 	                             2/* TTL */,
-	                             0/*error */);
+	                             &error);
 	Py_END_ALLOW_THREADS
 	/* Py_RETURN_NONE ??? */
-	for(dev = self->devlist, i = 0; dev; dev = dev->pNext)
-		i++;
-	res = Py_BuildValue("i", i);
-	return res;
+	if (self->devlist != NULL) {
+		struct UPNPDev * dev;
+		int i = 0;
+
+		for(dev = self->devlist; dev; dev = dev->pNext)
+			i++;
+		res = Py_BuildValue("i", i);
+		return res;
+	} else {
+		PyErr_SetString(PyExc_Exception, strupnperror(error));
+		return NULL;
+	}
 }
 
 static PyObject *
@@ -644,8 +652,9 @@ static PyTypeObject UPnPType = {
 #ifndef _WIN32
     PyType_GenericNew,/*UPnP_new,*/      /* tp_new */
 #else
-    0,
+    0,                         /* tp_new */
 #endif
+    0,                         /* tp_free */
 };
 
 /* module methods */

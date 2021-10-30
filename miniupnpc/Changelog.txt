@@ -1,5 +1,31 @@
-$Id: Changelog.txt,v 1.242 2019/12/23 23:35:40 nanard Exp $
+$Id: Changelog.txt,v 1.251 2021/09/28 21:53:38 nanard Exp $
 miniUPnP client Changelog.
+
+VERSION 2.2.3 : released 2021/09/28
+
+2021/08/13:
+  Change directory structure : include/ and src/ directories.
+
+VERSION 2.2.2 : released 2021/03/03
+
+2021/01/15:
+  miniupnpcmodule.c: throw an exception in UPnP_discover()
+
+2020/12/30:
+  Fix usage of IP_MULTICAST_IF with struct ip_mreqn
+
+VERSION 2.2.1 : released 2020/12/20
+
+2020/11/30:
+  Add miniupnpc.rc for .dll description
+
+VERSION 2.2.0 : released 2020/11/09
+
+2020/09/24:
+  Check properly for reserved IP addresses
+
+2020/09/23:
+  prevent infinite loop in upnpDiscover()
 
 2020/02/16:
   Add Haiku support

@@ -1,7 +1,7 @@
-/* $Id: nftpinhole.c,v 1.3 2019/10/06 20:50:48 nanard Exp $ */
+/* $Id: nftpinhole.c,v 1.7 2020/11/11 12:08:43 nanard Exp $ */
 /* MiniUPnP project
  * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2012-2019 Thomas Bernard
+ * (c) 2012-2020 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -35,8 +35,8 @@
 
 #include "tiny_nf_nat.h"
 
+#include "config.h"
 #include "../macros.h"
-#include "../config.h"
 #include "nftnlrdr.h"
 #include "../upnpglobalvars.h"
 
@@ -211,7 +211,9 @@ delete_pinhole(unsigned short uid)
 int
 update_pinhole(unsigned short uid, unsigned int timestamp)
 {
+#ifdef DEBUG
 	char iaddr[INET6_ADDRSTRLEN];
+#endif
 	char raddr[INET6_ADDRSTRLEN];
 	char label_start[NFT_DESCR_SIZE];
 	char tmp_label[NFT_DESCR_SIZE];
@@ -370,7 +372,8 @@ get_pinhole_info(unsigned short uid,
 				*proto = p->proto;
 
 			if (timestamp) {
-				if (sscanf(p->desc, PINEHOLE_LABEL_FORMAT_SKIPDESC,(int *) &uid, &ts) != 2) {
+				int uid_temp;
+				if (sscanf(p->desc, PINEHOLE_LABEL_FORMAT_SKIPDESC, &uid_temp, &ts) != 2) {
 					syslog(LOG_DEBUG, "rule with label '%s' is not a IGD pinhole", p->desc);
 					continue;
 				}

@@ -1,8 +1,8 @@
-/* $Id: upnpredirect.c,v 1.95 2018/07/06 12:05:48 nanard Exp $ */
+/* $Id: upnpredirect.c,v 1.97 2020/06/06 17:55:24 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2018 Thomas Bernard
+ * (c) 2006-2020 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -579,14 +579,16 @@ upnp_delete_redirection(unsigned short eport, const char * protocol)
 	return _upnp_delete_redir(eport, proto_atoi(protocol));
 }
 
-/* upnp_get_portmapping_number_of_entries()
- * TODO: improve this code. */
+/* upnp_get_portmapping_number_of_entries() */
 int
 upnp_get_portmapping_number_of_entries()
 {
+#if defined(USE_PF) || defined(USE_NFTABLES)
+	return get_redirect_rule_count(ext_if_name);
+#else
 	int n = 0, r = 0;
 	unsigned short eport, iport;
-	char protocol[4], iaddr[32], desc[64], rhost[32];
+	char protocol[8], iaddr[32], desc[64], rhost[32];
 	unsigned int leaseduration;
 	do {
 		protocol[0] = '\0'; iaddr[0] = '\0'; desc[0] = '\0';
@@ -598,6 +600,7 @@ upnp_get_portmapping_number_of_entries()
 		n++;
 	} while(r==0);
 	return (n-1);
+#endif
 }
 
 /* functions used to remove unused rules

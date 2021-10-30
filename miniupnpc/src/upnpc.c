@@ -1,7 +1,7 @@
-/* $Id: upnpc.c,v 1.119 2018/03/13 23:34:46 nanard Exp $ */
+/* $Id: upnpc.c,v 1.129 2021/05/10 20:51:29 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
- * Copyright (c) 2005-2020 Thomas Bernard
+ * Copyright (c) 2005-2021 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
 
@@ -11,7 +11,7 @@
 #include <time.h>
 #ifdef _WIN32
 #include <winsock2.h>
-#define snprintf _snprintf
+#include "win32_snprintf.h"
 #else
 /* for IPPROTO_TCP / IPPROTO_UDP */
 #include <netinet/in.h>
@@ -111,6 +111,8 @@ static void DisplayInfos(struct UPNPUrls * urls,
 							  externalIPAddress);
 	if(r != UPNPCOMMAND_SUCCESS) {
 		printf("GetExternalIPAddress failed. (errorcode=%d)\n", r);
+	} else if(!externalIPAddress[0]) {
+		printf("GetExternalIPAddress failed. (empty string)\n");
 	} else {
 		printf("ExternalIPAddress = %s\n", externalIPAddress);
 	}
@@ -173,7 +175,7 @@ static void ListRedirections(struct UPNPUrls * urls,
 			printf("GetGenericPortMappingEntry() returned %d (%s)\n",
 			       r, strupnperror(r));
 		i++;
-	} while(r==0);
+	} while(r == 0 && i < 65536);
 }
 
 static void NewListRedirections(struct UPNPUrls * urls,
@@ -567,6 +569,7 @@ int main(int argc, char ** argv)
 	int retcode = 0;
 	int error = 0;
 	int ipv6 = 0;
+	int ignore = 0;
 	unsigned char ttl = 2;	/* defaulting to 2 */
 	const char * description = 0;
 
@@ -580,7 +583,7 @@ int main(int argc, char ** argv)
 	}
 #endif
     printf("upnpc : miniupnpc library test client, version %s.\n", MINIUPNPC_VERSION_STRING);
-	printf(" (c) 2005-2020 Thomas Bernard.\n");
+	printf(" (c) 2005-2021 Thomas Bernard.\n");
     printf("Go to http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/\n"
 	       "for more information.\n");
 	/* command line processing */
@@ -620,6 +623,8 @@ int main(int argc, char ** argv)
 				description = argv[++i];
 			else if(argv[i][1] == 't')
 				ttl = (unsigned char)atoi(argv[++i]);
+			else if(argv[i][1] == 'i')
+				ignore = 1;
 			else
 			{
 				command = argv[i][1];
@@ -668,6 +673,7 @@ int main(int argc, char ** argv)
 		fprintf(stderr, "  -z localport : SSDP packets local (source) port (1024-65535).\n");
 		fprintf(stderr, "  -p path : use this path for MiniSSDPd socket.\n");
 		fprintf(stderr, "  -t ttl : set multicast TTL. Default value is 2.\n");
+		fprintf(stderr, "  -i : ignore errors and try to use also disconnected IGD or non-IGD device.\n");
 		return 1;
 	}
 
@@ -701,16 +707,18 @@ int main(int argc, char ** argv)
 				break;
 			case 2:
 				printf("Found a (not connected?) IGD : %s\n", urls.controlURL);
-				printf("Trying to continue anyway\n");
+				if (ignore) printf("Trying to continue anyway\n");
 				break;
 			case 3:
 				printf("UPnP device found. Is it an IGD ? : %s\n", urls.controlURL);
-				printf("Trying to continue anyway\n");
+				if (ignore) printf("Trying to continue anyway\n");
 				break;
 			default:
 				printf("Found device (igd ?) : %s\n", urls.controlURL);
-				printf("Trying to continue anyway\n");
+				if (ignore) printf("Trying to continue anyway\n");
 			}
+			if(i==1 || ignore) {
+
 			printf("Local LAN ip address : %s\n", lanaddr);
 			#if 0
 			printf("getting \"%s\"\n", urls.ipcondescURL);
@@ -735,8 +743,8 @@ int main(int argc, char ** argv)
 				if (SetRedirectAndTest(&urls, &data,
 						   commandargv[0], commandargv[1],
 						   commandargv[2], commandargv[3],
-						   (commandargc > 4)&is_int(commandargv[4])?commandargv[4]:"0",
-						   (commandargc > 4)&!is_int(commandargv[4])?commandargv[4]:(commandargc > 5)?commandargv[5]:NULL,
+						   (commandargc > 4) && is_int(commandargv[4]) ? commandargv[4] : "0",
+						   (commandargc > 4) && !is_int(commandargv[4]) ? commandargv[4] : (commandargc > 5) ? commandargv[5] : NULL,
 						   description, 0) < 0)
 					retcode = 2;
 				break;
@@ -749,8 +757,8 @@ int main(int argc, char ** argv)
 				if (SetRedirectAndTest(&urls, &data,
 						   commandargv[0], commandargv[1],
 						   commandargv[2], commandargv[3],
-                                                   (commandargc > 4)&is_int(commandargv[4])?commandargv[4]:"0",
-                                                   (commandargc > 4)&!is_int(commandargv[4])?commandargv[4]:(commandargc > 5)?commandargv[5]:NULL,
+						   (commandargc > 4) && is_int(commandargv[4]) ? commandargv[4] : "0",
+						   (commandargc > 4) && !is_int(commandargv[4]) ? commandargv[4] : (commandargc > 5) ? commandargv[5] : NULL,
 						   description, 1) < 0)
 					retcode = 2;
 				break;
@@ -839,6 +847,10 @@ int main(int argc, char ** argv)
 				retcode = 1;
 			}
 
+			} else {
+				fprintf(stderr, "No valid UPNP Internet Gateway Device found.\n");
+				retcode = 1;
+			}
 			FreeUPNPUrls(&urls);
 		}
 		else
