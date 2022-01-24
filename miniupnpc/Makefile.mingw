@@ -5,7 +5,7 @@
 # This Makefile is made for MinGW
 #
 # To cross compile on a *nix machine :
-# make -f Makefile.mingw DLLWRAP=mingw32-dllwrap CC=mingw32-gcc AR=mingw32-ar
+# make -f Makefile.mingw DLLWRAP=mingw32-dllwrap CC=mingw32-gcc AR=mingw32-ar WINDRES=mingw32-windres
 #
 SRCDIR = src
 INCDIR = include
@@ -51,6 +51,14 @@ COMMITREF=$(shell git rev-parse --short HEAD)
 endif
 endif
 DISTFILE:=$(shell echo "miniupnpc-bin-win32-`cat VERSION`-$(COMMITREF).zip")
+
+LIBDIR ?= lib
+# install directories
+ifeq ($(strip $(PREFIX)),)
+INSTALLPREFIX ?= /usr
+else
+INSTALLPREFIX ?= $(PREFIX)
+endif
 
 .PHONY:	all dist clean
 
@@ -124,6 +132,19 @@ rc_version.h:	VERSION
 	echo "#define LIBMINIUPNPC_MICRO_VERSION $(shell cat VERSION|cut -d. -f3)" >> $@.tmp
 	mv $@.tmp $@
 endif
+
+miniupnpc.pc:	VERSION
+	$(RM) $@
+	echo "prefix=$(INSTALLPREFIX)" >> $@
+	echo "exec_prefix=\$${prefix}" >> $@
+	echo "libdir=\$${exec_prefix}/$(LIBDIR)" >> $@
+	echo "includedir=\$${prefix}/include" >> $@
+	echo "" >> $@
+	echo "Name: miniUPnPc" >> $@
+	echo "Description: UPnP IGD client lightweight library" >> $@
+	echo "Version: $(shell cat VERSION)" >> $@
+	echo "Libs: -L\$${libdir} -lminiupnpc" >> $@
+	echo "Cflags: -I\$${includedir}" >> $@
 
 winres.o:	miniupnpc.rc rc_version.h
 	$(WINDRES) -D INTERNAL_NAME=\\\"miniupnpc.dll\\0\\\" -i $< -o $@
