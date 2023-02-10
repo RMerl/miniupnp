@@ -1,5 +1,10 @@
-$Id: Changelog.txt,v 1.252 2021/11/09 18:34:41 nanard Exp $
+$Id: Changelog.txt,v 1.254 2022/10/21 21:13:12 nanard Exp $
 miniUPnP client Changelog.
+
+VERSION 2.2.4 : released 2022/10/21
+
+2022/02/20:
+  upnpc: use of @ to replace local lan address
 
 2021/11/09:
   python module : Allow to specify the root description url

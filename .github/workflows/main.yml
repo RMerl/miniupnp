@@ -8,7 +8,7 @@ on:
   push:
     paths:
     - 'miniupnpc/**'
-    - 'miniupnpd/**'
+    - 'minissdpd/**'
     - '.github/workflows/main.yml'
   pull_request:
     branches: [ master ]
@@ -22,7 +22,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: build miniupnpc with make
         run: make -C miniupnpc all check
@@ -31,7 +31,7 @@ jobs:
         run: make -C miniupnpc install DESTDIR=/tmp/miniupnpc_install
 
       - name: build miniupnpc with cmake
-        run: mkdir miniupnpc/cmake-build && cd miniupnpc/cmake-build && cmake .. && make
+        run: mkdir miniupnpc/cmake-build && cd miniupnpc/cmake-build && cmake .. && make && make test
 
       - name: install miniupnpc with cmake
         run: cd miniupnpc/cmake-build && make DESTDIR=/tmp/miniupnpc_cmake_install install
@@ -43,7 +43,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: install packages
         run: sudo apt-get install libnfnetlink-dev
