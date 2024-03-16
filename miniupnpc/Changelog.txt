@@ -1,5 +1,27 @@
-$Id: Changelog.txt,v 1.254 2022/10/21 21:13:12 nanard Exp $
+$Id: Changelog.txt,v 1.262 2024/01/04 00:49:22 nanard Exp $
 miniUPnP client Changelog.
+
+VERSION 2.2.6 : released 2024/04/01
+
+2024/01/04:
+  includes charset="utf-8" in Content-Type
+  fix memory allocation error in minissdpc.c
+
+2023/06/15:
+  Make User-Agent compliant.
+  listdevices => upnp-listdevices
+
+VERSION 2.2.5 : released 2023/06/12
+
+2023/06/05:
+  GetListOfPortMappings NewStartPort 0 => 1
+
+2023/05/30:
+  CheckPinholeWorking is optional
+  add 60x errors from UPnP Device Architecture
+
+2023/01/04:
+  cmake: install binaries, man pages and external-ip.sh
 
 VERSION 2.2.4 : released 2022/10/21
 
