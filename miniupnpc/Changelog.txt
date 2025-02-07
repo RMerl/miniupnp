@@ -1,5 +1,25 @@
-$Id: Changelog.txt,v 1.264 2024/03/19 23:26:05 nanard Exp $
+$Id: Changelog.txt,v 1.271 2025/01/10 23:19:30 nanard Exp $
 miniUPnP client Changelog.
+
+VERSION 2.3.0 : released 2025/01/11
+
+2025/01/10:
+  Change simpleUPnPcommand() prototype to remove unused first argument
+  Increments API_VERSION to 19
+
+2024/07/27:
+  Add #define for UPNP_GetValidIGD() return values
+
+VERSION 2.2.8 : released 2024/06/09
+
+2024/05/16:
+  IPv6: try site-local before link-local
+
+2024/05/08:
+  upnpc.c: Add -f option to upnpc program (delete multiple port redirections)
+  UPNP_GetValidIGD(): distinguish between not connected and connected to a
+    "private" network (with a reserved IP address).
+  Increments API_VERSION to 18
 
 VERSION 2.2.7 : released 2024/03/20
 
