@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.150 2023/06/15 22:55:24 nanard Exp $
+# $Id: Makefile,v 1.156 2025/03/18 23:40:14 nanard Exp $
 # MiniUPnP Project
 # http://miniupnp.free.fr/
 # https://miniupnp.tuxfamily.org/
@@ -84,9 +84,10 @@ ifneq (, $(findstring sun, $(OS))$(findstring solaris, $(OS)))
 endif
 
 # APIVERSION is used to build SONAME
-APIVERSION = 19
+APIVERSION = 21
 
 SRCS = $(wildcard $(SRCDIR)/*.c)
+PRIVATE_HEADERS = $(wildcard $(SRCDIR)/*.h)
 
 LIBOBJS = $(addprefix $(BUILD)/,miniwget.o minixml.o igd_desc_parse.o minisoap.o \
           miniupnpc.o upnpreplyparse.o upnpcommands.o upnperrors.o \
@@ -399,7 +400,7 @@ ideb:
 
 minihttptestserver:	minihttptestserver.o
 
-doxygen/html/index.html: Doxyfile $(SRCS) $(HEADERS)
+doxygen/html/index.html: Doxyfile $(SRCS) $(HEADERS) $(PRIVATE_HEADERS)
 	doxygen
 
 print-%:

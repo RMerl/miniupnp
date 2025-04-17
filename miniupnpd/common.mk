@@ -8,7 +8,7 @@ testgetifstats:	testgetifstats.o getifstats.o
 
 testupnppermissions:	testupnppermissions.o upnppermissions.o
 
-testgetifaddr:	testgetifaddr.o getifaddr.o
+testgetifaddr:	testgetifaddr.o getifaddr.o getconnstatus.o
 
 testgetroute:	testgetroute.o getroute.o upnputils.o
 
@@ -19,6 +19,8 @@ testasyncsendto:	testasyncsendto.o asyncsendto.o upnputils.o \
 
 testminissdp:	testminissdp.o minissdp.o upnputils.o upnpglobalvars.o \
 	asyncsendto.o getroute.o
+
+testifacewatcher:	testifacewatcher.o ifacewatcher.o
 
 miniupnpdctl:	miniupnpdctl.o
 

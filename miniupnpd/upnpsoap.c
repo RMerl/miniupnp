@@ -1,8 +1,8 @@
-/* $Id: upnpsoap.c,v 1.165 2023/06/26 23:15:56 nanard Exp $ */
+/* $Id: upnpsoap.c,v 1.169 2025/04/06 22:30:26 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2024 Thomas Bernard
+ * (c) 2006-2025 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -370,8 +370,12 @@ GetExternalIPAddress(struct upnphttp * h, const char * action, const char * ns)
 				ext_if_name);
 			ext_ip_addr[0] = '\0';
 		} else if (addr_is_reserved(&addr)) {
-			syslog(LOG_NOTICE, "private/reserved address %s is not suitable for external IP", ext_ip_addr);
-			ext_ip_addr[0] = '\0';
+			if (!GETFLAG(ALLOWPRIVATEIPV4MASK)) {
+				syslog(LOG_WARNING, "IGNORED : private/reserved address %s is not suitable for external IP", ext_ip_addr);
+			} else {
+				syslog(LOG_NOTICE, "private/reserved address %s is not suitable for external IP", ext_ip_addr);
+				ext_ip_addr[0] = '\0';
+			}
 		}
 	}
 #else
