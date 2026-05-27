@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project (miniupnpc
-         VERSION 2.3.2
+         VERSION 2.3.3
          DESCRIPTION "UPnP IGD client lightweight library"
          HOMEPAGE_URL https://miniupnp.tuxfamily.org/
          LANGUAGES C)
@@ -33,7 +33,7 @@ if (NOT WIN32)
     MINIUPNPC_SET_SOCKET_TIMEOUT
     MINIUPNPC_GET_SRC_ADDR
     _BSD_SOURCE _DEFAULT_SOURCE)
-  if (NOT APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES ".*BSD" AND NOT CMAKE_SYSTEM_NAME STREQUAL "SunOS")
+  if (NOT APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES ".*BSD" AND NOT CMAKE_SYSTEM_NAME STREQUAL "DragonFly" AND NOT CMAKE_SYSTEM_NAME STREQUAL "SunOS")
     # add_definitions (-D_POSIX_C_SOURCE=200112L)
     target_compile_definitions(miniupnpc-private INTERFACE _XOPEN_SOURCE=600)
   endif ()

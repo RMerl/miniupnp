@@ -1,14 +1,15 @@
-/* $Id: receivedata.c,v 1.10 2021/03/02 23:33:07 nanard Exp $ */
+/* $Id: receivedata.c,v 1.11 2025/05/25 21:56:49 nanard Exp $ */
 /* Project : miniupnp
  * Website : http://miniupnp.free.fr/
  * Author : Thomas Bernard
- * Copyright (c) 2011-2021 Thomas Bernard
+ * Copyright (c) 2011-2025 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
 
 #include <stdio.h>
 #include <string.h>
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else /* _WIN32 */
@@ -62,6 +63,14 @@ receivedata(SOCKET socket,
 	/* using select under _WIN32 and amigaos */
     fd_set socketSet;
     TIMEVAL timeval;
+#ifndef _WIN32
+    /* Non-Windows, one needs to ensure the socket fd is within range */
+    if(socket >= FD_SETSIZE) {
+        fprintf(stderr, "Socket %d is >= FD_SETSIZE %d\n",
+                (int)socket, (int)FD_SETSIZE);
+        return -1;
+    }
+#endif
     FD_ZERO(&socketSet);
     FD_SET(socket, &socketSet);
     timeval.tv_sec = timeout / 1000;

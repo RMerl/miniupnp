@@ -1,6 +1,6 @@
-/* $Id: testgetifaddr.c,v 1.9 2025/04/08 21:28:45 nanard Exp $ */
+/* $Id: testgetifaddr.c,v 1.10 2025/04/21 21:43:37 nanard Exp $ */
 /* MiniUPnP project
- * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
+ * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * (c) 2006-2025 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
@@ -23,8 +23,8 @@ int main(int argc, char * * argv) {
 	char str_addr[64];
 	struct in_addr addr;
 	struct in_addr mask;
-#ifdef ENABLE_IPV6
 	int r;
+#ifdef ENABLE_IPV6
 	char str_addr6[64];
 #endif
 	if(argc < 2) {

@@ -33,6 +33,12 @@
 #include <grp.h>
 #endif
 
+#if defined(__sun)
+               /* solaris does not seem to have link_ntoa */
+               /* #define link_ntoa _link_ntoa */
+#define link_ntoa(x) "dummy-link_ntoa"
+#endif
+
 /* LOG_PERROR does not exist on Solaris */
 #ifndef LOG_PERROR
 #define LOG_PERROR 0
@@ -1529,7 +1535,7 @@ int main(int argc, char * * argv)
 			}
 		}
 		gettimeofday(&now, NULL);
-		i = get_sendto_fds(&writefds, &max_fd, &now);
+		get_sendto_fds(&writefds, &max_fd, &now);
 		/* select call */
 		if(select(max_fd + 1, &readfds, &writefds, 0, 0) < 0) {
 			if(errno != EINTR) {
@@ -1660,23 +1666,19 @@ int main(int argc, char * * argv)
 quit:
 	if(s_ssdp >= 0) {
 		close(s_ssdp);
-		s_ssdp = -1;
 	}
 #ifdef ENABLE_IPV6
 	if(s_ssdp6 >= 0) {
 		close(s_ssdp6);
-		s_ssdp6 = -1;
 	}
 #endif	/* ENABLE_IPV6 */
 	if(s_unix >= 0) {
 		close(s_unix);
-		s_unix = -1;
 		if(unlink(sockpath) < 0)
 			syslog(LOG_ERR, "unlink(%s): %m", sockpath);
 	}
 	if(s_ifacewatch >= 0) {
 		close(s_ifacewatch);
-		s_ifacewatch = -1;
 	}
 	/* empty LAN interface/address list */
 	while(lan_addrs.lh_first != NULL) {

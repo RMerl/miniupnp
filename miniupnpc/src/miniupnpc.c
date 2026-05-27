@@ -3,7 +3,7 @@
  * Project : miniupnp
  * Web : http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * Author : Thomas BERNARD
- * copyright (c) 2005-2025 Thomas Bernard
+ * copyright (c) 2005-2026 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENSE file. */
 #include <stdlib.h>
@@ -11,6 +11,7 @@
 #include <string.h>
 #ifdef _WIN32
 /* Win32 Specific includes and defines */
+#define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
@@ -104,7 +105,7 @@ simpleUPnPcommand(const char * url, const char * service,
 {
 	char hostname[MAXHOSTNAMELEN+1];
 	unsigned short port = 0;
-	char * path;
+	const char * path;
 	char soapact[128];
 	char soapbody[2048];
 	int soapbodylen;
@@ -375,6 +376,7 @@ build_absolute_url(const char * baseurl, const char * descURL,
 	size_t l, n;
 	char * s;
 	const char * base;
+	const char * base_p;
 	char * p;
 #if defined(IF_NAMESIZE) && !defined(_WIN32)
 	char ifname[IF_NAMESIZE];
@@ -393,9 +395,9 @@ build_absolute_url(const char * baseurl, const char * descURL,
 	base = (baseurl[0] == '\0') ? descURL : baseurl;
 	n = strlen(base);
 	if(n > 7) {
-		p = strchr(base + 7, '/');
-		if(p)
-			n = p - base;
+		base_p = strchr(base + 7, '/');
+		if(base_p)
+			n = base_p - base;
 	}
 	l = n + strlen(url) + 1;
 	if(url[0] != '/')
@@ -404,6 +406,8 @@ build_absolute_url(const char * baseurl, const char * descURL,
 #if defined(IF_NAMESIZE) && !defined(_WIN32)
 		if(if_indextoname(scope_id, ifname)) {
 			l += 3 + strlen(ifname);	/* 3 == strlen(%25) */
+		} else {
+			ifname[0] = '\0';
 		}
 #else /* defined(IF_NAMESIZE) && !defined(_WIN32) */
 		/* under windows, scope is numerical */
@@ -418,20 +422,22 @@ build_absolute_url(const char * baseurl, const char * descURL,
 		if(n > 13 && 0 == memcmp(s, "http://[fe80:", 13)) {
 			/* this is a linklocal IPv6 address */
 			p = strchr(s, ']');
-			if(p) {
-				/* insert %25<scope> into URL */
 #if defined(IF_NAMESIZE) && !defined(_WIN32)
+			if(p && ifname[0]) {
+				/* insert %25<scope> into URL */
 				memmove(p + 3 + strlen(ifname), p, strlen(p) + 1);
 				memcpy(p, "%25", 3);
 				memcpy(p + 3, ifname, strlen(ifname));
 				n += 3 + strlen(ifname);
+			}
 #else /* defined(IF_NAMESIZE) && !defined(_WIN32) */
+			if(p) {
 				memmove(p + 3 + strlen(scope_str), p, strlen(p) + 1);
 				memcpy(p, "%25", 3);
 				memcpy(p + 3, scope_str, strlen(scope_str));
 				n += 3 + strlen(scope_str);
-#endif /* defined(IF_NAMESIZE) && !defined(_WIN32) */
 			}
+#endif /* defined(IF_NAMESIZE) && !defined(_WIN32) */
 		}
 	}
 	if(url[0] != '/')
@@ -460,10 +466,11 @@ GetUPNPUrls(struct UPNPUrls * urls, struct IGDdatas * data,
 	                                          data->IPv6FC.controlurl, scope_id);
 
 #ifdef DEBUG
-	printf("urls->ipcondescURL='%s'\n", urls->ipcondescURL);
-	printf("urls->controlURL='%s'\n", urls->controlURL);
-	printf("urls->controlURL_CIF='%s'\n", urls->controlURL_CIF);
-	printf("urls->controlURL_6FC='%s'\n", urls->controlURL_6FC);
+#define STRORNULL(s) ((s) == NULL ? "<null>" : (s))
+	printf("urls->ipcondescURL='%s'\n", STRORNULL(urls->ipcondescURL));
+	printf("urls->controlURL='%s'\n", STRORNULL(urls->controlURL));
+	printf("urls->controlURL_CIF='%s'\n", STRORNULL(urls->controlURL_CIF));
+	printf("urls->controlURL_6FC='%s'\n", STRORNULL(urls->controlURL_6FC));
 #endif
 }
 

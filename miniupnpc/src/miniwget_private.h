@@ -1,7 +1,7 @@
 /* $Id: miniwget_private.h,v 1.1 2018/04/06 10:17:58 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
- * Copyright (c) 2018-2025 Thomas Bernard
+ * Copyright (c) 2018-2026 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution.
  * */
@@ -48,7 +48,7 @@ void * getHTTPResponse(SOCKET s, int * size, int * status_code);
  * \return 0 for failure, 1 for success
  */
 int parseURL(const char * url,
-             char * hostname, unsigned short * port, char * * path,
+             char * hostname, unsigned short * port, const char * * path,
              unsigned int * scope_id);
 
 #endif

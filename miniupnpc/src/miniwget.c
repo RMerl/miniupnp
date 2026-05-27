@@ -1,8 +1,8 @@
-/* $Id: miniwget.c,v 1.85 2023/06/15 21:47:50 nanard Exp $ */
+/* $Id: miniwget.c,v 1.88 2025/05/25 21:56:49 nanard Exp $ */
 /* Project : miniupnp
  * Website : http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * Author : Thomas Bernard
- * Copyright (c) 2005-2024 Thomas Bernard
+ * Copyright (c) 2005-2026 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
 
@@ -11,6 +11,7 @@
 #include <string.h>
 #include <ctype.h>
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
@@ -57,6 +58,25 @@
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 64
 #endif
+
+/*\ brief convert decimal string to unsigned integer
+ *
+ * It reads decimal digits ('0' to '9') and stops as soon as it reaches
+ * the end pointer or a non-digit character
+ *
+ * \param start pointer to the 1st digit
+ * \param end pointer to the 1st character after the string
+ */
+static unsigned int
+my_strtoui(const char * start, const char * end)
+{
+	unsigned int i = 0;
+	while ((start < end) && (*start >= '0') && (*start <= '9')) {
+		i = (i * 10) + (*start - '0');
+		start++;
+	}
+	return i;
+}
 
 /*
  * Read a HTTP response from a socket.
@@ -135,8 +155,7 @@ getHTTPResponse(SOCKET s, int * size, int * status_code)
 			header_buf_used += n;
 			/* search for CR LF CR LF (end of headers)
 			 * recognize also LF LF */
-			i = 0;
-			while(i < ((int)header_buf_used-1) && (endofheaders == 0)) {
+			for(i = 0; i < ((int)header_buf_used-1) && (endofheaders == 0); i++) {
 				if(header_buf[i] == '\r') {
 					i++;
 					if(header_buf[i] == '\n') {
@@ -154,7 +173,6 @@ getHTTPResponse(SOCKET s, int * size, int * status_code)
 						endofheaders = i+1;
 					}
 				}
-				i++;
 			}
 			if(endofheaders == 0)
 				continue;
@@ -182,7 +200,7 @@ getHTTPResponse(SOCKET s, int * size, int * status_code)
 								if(*status_code < 0)
 								{
 									if (header_buf[sp+1] >= '1' && header_buf[sp+1] <= '9')
-										*status_code = atoi(header_buf + sp + 1);
+										*status_code = (int)my_strtoui(header_buf + sp + 1, header_buf + i);
 								}
 								else
 								{
@@ -207,7 +225,7 @@ getHTTPResponse(SOCKET s, int * size, int * status_code)
 #endif
 						if(0==strncasecmp(header_buf+linestart, "content-length", colon-linestart))
 						{
-							content_length = atoi(header_buf+valuestart);
+							content_length = (int)my_strtoui(header_buf + valuestart, header_buf + i);
 #ifdef DEBUG
 							printf("Content-Length: %d\n", content_length);
 #endif
@@ -486,9 +504,9 @@ miniwget3(const char * host,
 int
 parseURL(const char * url,
          char * hostname, unsigned short * port,
-         char * * path, unsigned int * scope_id)
+         const char * * path, unsigned int * scope_id)
 {
-	char * p1, *p2, *p3;
+	const char * p1, *p2, *p3;
 	if(!url)
 		return 0;
 	p1 = strstr(url, "://");
@@ -502,7 +520,7 @@ parseURL(const char * url,
 	if(*p1 == '[')
 	{
 		/* IP v6 : http://[2a00:1450:8002::6a]/path/abc */
-		char * scope;
+		const char * scope;
 		scope = strchr(p1, '%');
 		p2 = strchr(p1, ']');
 		if(p2 && scope && scope < p2 && scope_id) {
@@ -593,7 +611,7 @@ miniwget(const char * url, int * size,
          unsigned int scope_id, int * status_code)
 {
 	unsigned short port;
-	char * path;
+	const char * path;
 	/* protocol://host:port/chemin */
 	char hostname[MAXHOSTNAMELEN+1];
 	*size = 0;
@@ -612,7 +630,7 @@ miniwget_getaddr(const char * url, int * size,
                  int * status_code)
 {
 	unsigned short port;
-	char * path;
+	const char * path;
 	/* protocol://host:port/path */
 	char hostname[MAXHOSTNAMELEN+1];
 	*size = 0;

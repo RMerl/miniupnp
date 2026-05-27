@@ -16,6 +16,7 @@
 #endif
 #if defined(_WIN32) || defined(__amigaos__) || defined(__amigaos4__)
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
@@ -542,10 +543,10 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 	int n;
 	struct sockaddr_storage sockudp_r;
 	unsigned int mx;
+	int rv;
 #ifdef NO_GETADDRINFO
 	struct sockaddr_storage sockudp_w;
 #else
-	int rv;
 	struct addrinfo hints, *servinfo;
 #endif
 #ifdef _WIN32
@@ -697,7 +698,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 		if(error)
 			*error = MINISSDPC_SOCKET_ERROR;
 		PRINT_SOCKET_ERROR("setsockopt(SO_REUSEADDR,...)");
-		goto error;
+		goto close_and_return;
 	}
 
 	if(ipv6) {
@@ -736,7 +737,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 				if(error)
 					*error = MINISSDPC_INVALID_INPUT;
 				fprintf(stderr, "Invalid multicast interface name %s\n", multicastif);
-				goto error;
+				goto close_and_return;
 			}
 			if(setsockopt(sudp, IPPROTO_IPV6, IPV6_MULTICAST_IF, &ifindex, sizeof(ifindex)) < 0)
 			{
@@ -781,7 +782,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 				if(ioctl(sudp, SIOCGIFADDR, &ifr, &ifrlen) < 0)
 				{
 					PRINT_SOCKET_ERROR("ioctl(...SIOCGIFADDR...)");
-					goto error;
+					goto close_and_return;
 				}
 				mc_if.s_addr = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
 #ifdef HAS_IP_MREQN
@@ -793,7 +794,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 					if(error)
 						*error = MINISSDPC_INVALID_INPUT;
 					fprintf(stderr, "Invalid multicast ip address / interface name %s\n", multicastif);
-					goto error;
+					goto close_and_return;
 				}
 				if(setsockopt(sudp, IPPROTO_IP, IP_MULTICAST_IF, (const char *)&reqn, sizeof(reqn)) < 0)
 				{
@@ -822,8 +823,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 		if(error)
 			*error = MINISSDPC_SOCKET_ERROR;
 		PRINT_SOCKET_ERROR("bind");
-		closesocket(sudp);
-		return NULL;
+		goto close_and_return;
 	}
 
 	if(error)
@@ -847,7 +847,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 		if ((unsigned int)n >= sizeof(bufr)) {
 			if(error)
 				*error = MINISSDPC_MEMORY_ERROR;
-			goto error;
+			goto close_and_return;
 		}
 #ifdef DEBUG
 		/*printf("Sending %s", bufr);*/
@@ -874,7 +874,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 			p->sin_port = htons(SSDP_PORT);
 			p->sin_addr.s_addr = inet_addr(UPNP_MCAST_ADDR);
 		}
-		rv = sendto(sudp, bufr, n, 0, &sockudp_w,
+		rv = sendto(sudp, bufr, n, 0, (struct sockaddr *)&sockudp_w,
 		            ipv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 		if (rv < 0) {
 			if(error)
@@ -939,7 +939,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 					/* error */
 					if(error)
 						*error = MINISSDPC_SOCKET_ERROR;
-					goto error;
+					goto close_and_return;
 				} else if (n == 0) {
 					/* no data or Time Out */
 #ifdef DEBUG
@@ -949,7 +949,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 						/* found some devices, stop now*/
 						if(error)
 							*error = MINISSDPC_SUCCESS;
-						goto error;
+						goto close_and_return;
 					}
 				} else {
 					const char * descURL=NULL;
@@ -982,7 +982,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 							/* memory allocation error */
 							if(error)
 								*error = MINISSDPC_MEMORY_ERROR;
-							goto error;
+							goto close_and_return;
 						}
 						tmp->pNext = devlist;
 						tmp->descURL = tmp->buffer;
@@ -1019,7 +1019,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 			}
 		}
 	}
-error:
+close_and_return:
 	closesocket(sudp);
 	return devlist;
 }

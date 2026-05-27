@@ -1,8 +1,9 @@
-/* $Id: connecthostport.c,v 1.24 2020/11/09 19:26:53 nanard Exp $ */
+/* $Id: connecthostport.c,v 1.25 2025/05/24 15:59:08 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * Project : miniupnp
+ * Web : http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * Author : Thomas Bernard
- * Copyright (c) 2010-2020 Thomas Bernard
+ * Copyright (c) 2010-2026 Thomas Bernard
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
 
@@ -15,6 +16,7 @@
 #include <string.h>
 #include <stdio.h>
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
@@ -39,6 +41,10 @@
 #define MINIUPNPC_IGNORE_EINTR
 #include <sys/socket.h>
 #include <sys/select.h>
+#if !defined(__amigaos__) && !defined(__amigaos4__)
+#define USE_POLL
+#include <poll.h>
+#endif
 #endif /* #else _WIN32 */
 
 #if defined(__amigaos__) || defined(__amigaos4__)
@@ -47,9 +53,36 @@
 
 #include "connecthostport.h"
 
+#if defined(_WIN32) && defined(MINIUPNPC_IGNORE_EINTR)
+#error MINIUPNPC_IGNORE_EINTR cannot be used in Win32 builds
+#endif
+
+#ifndef MINIUPNPC_CONNECT_TIMEOUT_IN_MS
+#define MINIUPNPC_CONNECT_TIMEOUT_IN_MS 3000
+#endif
+
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 64
 #endif
+
+#if defined(MINIUPNPC_IGNORE_EINTR) && !defined(USE_POLL)
+/* Returns 0 if not in range, 1 if fd is in range */
+static int is_socket_in_fd_set_range(SOCKET s)
+{
+#ifdef _WIN32
+	/* WIN32 systems don't need this check */
+	(void)s;
+	return 1;
+#else
+	if (s >= FD_SETSIZE) {
+		fprintf(stderr, "Socket %d is >= FD_SETSIZE %d\n",
+		        (int)s, (int)FD_SETSIZE);
+		return 0;
+	}
+	return 1;
+#endif /* #ifdef _WIN32 */
+}
+#endif /* #if defined(MINIUPNPC_SET_SOCKET_TIMEOUT) && !defined(USE_POLL) */
 
 /* connecthostport()
  * return a socket connected (TCP) to the host and port
@@ -69,7 +102,12 @@ SOCKET connecthostport(const char * host, unsigned short port,
 	struct addrinfo hints;
 #endif /* #ifdef USE_GETHOSTBYNAME */
 #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
-	struct timeval timeout;
+#ifdef _WIN32
+	DWORD timeout = MINIUPNPC_CONNECT_TIMEOUT_IN_MS; /* 3000 ms */
+#else
+	struct timeval timeout = { MINIUPNPC_CONNECT_TIMEOUT_IN_MS / 1000,
+							   (MINIUPNPC_CONNECT_TIMEOUT_IN_MS % 1000) * 1000 }; /* 3 s */
+#endif
 #endif /* #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT */
 
 #ifdef USE_GETHOSTBYNAME
@@ -89,15 +127,35 @@ SOCKET connecthostport(const char * host, unsigned short port,
 	}
 #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
 	/* setting a 3 seconds timeout for the connect() call */
-	timeout.tv_sec = 3;
-	timeout.tv_usec = 0;
+#ifdef _WIN32
+	/* https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-setsockopt
+	 * SO_RCVTIMEO DWORD Sets the timeout, in milliseconds, for blocking
+	 * receive calls. */
+	if(setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout)) < 0)
+#else
+	/* from socket(7) :
+	SO_RCVTIMEO et SO_SNDTIMEO
+	Specify the receiving or sending timeouts until reporting an error. The
+	argument is a struct timeval. If an input or output function blocks for
+	this period of time, and data has been sent or received, the return value
+	of that function will be the amount of data transferred; if no data has
+	been transferred and the timeout has been reached, then -1 is returned with
+	errno set to EAGAIN or EWOULDBLOCK, or EINPROGRESS (for connect(2)) just as
+	if the socket was specified to be nonblocking. If the timeout is set to
+	zero (the default), then the operation will never timeout. Timeouts only
+	have effect for system calls that perform socket I/O (e.g., accept(2),
+	connect(2), read(2), recvmsg(2), send(2), sendmsg(2)); timeouts have no
+	effect for select(2), poll(2), epoll_wait(2), and so on. */
 	if(setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(struct timeval)) < 0)
+#endif
 	{
 		PRINT_SOCKET_ERROR("setsockopt SO_RCVTIMEO");
 	}
-	timeout.tv_sec = 3;
-	timeout.tv_usec = 0;
+#ifdef _WIN32
+	if(setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout)) < 0)
+#else
 	if(setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(struct timeval)) < 0)
+#endif
 	{
 		PRINT_SOCKET_ERROR("setsockopt SO_SNDTIMEO");
 	}
@@ -112,19 +170,39 @@ SOCKET connecthostport(const char * host, unsigned short port,
 	while(n < 0 && (errno == EINTR || errno == EINPROGRESS))
 	{
 		socklen_t len;
-		fd_set wset;
 		int err;
+#ifdef USE_POLL
+		struct pollfd pfd = {s, POLLOUT, 0};
+#ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
+		n = poll(&pfd, 1, MINIUPNPC_CONNECT_TIMEOUT_IN_MS);
+#else
+		n = poll(&pfd, 1, -1);
+#endif
+		if(n == 1 && pfd.revents & POLLERR) {
+			/* error on socket */
+			closesocket(s);
+			return INVALID_SOCKET;
+		}
+#else /* #ifdef USE_POLL */
+		fd_set wset;
 		FD_ZERO(&wset);
+		if(!is_socket_in_fd_set_range(s)) {
+			closesocket(s);
+			return INVALID_SOCKET;
+		}
 		FD_SET(s, &wset);
 #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
-		timeout.tv_sec = 3;
-		timeout.tv_usec = 0;
 		n = select(s + 1, NULL, &wset, NULL, &timeout);
 #else
 		n = select(s + 1, NULL, &wset, NULL, NULL);
 #endif
-		if(n == -1 && errno == EINTR)
-			continue;
+#endif /* #ifdef USE_POLL */
+		if(n < 0) {
+			if (errno == EINTR)
+				continue;	/* try again */
+			else
+				break;	/* EBADF, EFAULT, EINVAL */
+		}
 #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
 		if(n == 0) {
 			errno = ETIMEDOUT;
@@ -132,8 +210,6 @@ SOCKET connecthostport(const char * host, unsigned short port,
 			break;
 		}
 #endif
-		/*len = 0;*/
-		/*n = getpeername(s, NULL, &len);*/
 		len = sizeof(err);
 		if(getsockopt(s, SOL_SOCKET, SO_ERROR, &err, &len) < 0) {
 			PRINT_SOCKET_ERROR("getsockopt");
@@ -208,15 +284,19 @@ SOCKET connecthostport(const char * host, unsigned short port,
 		}
 #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
 		/* setting a 3 seconds timeout for the connect() call */
-		timeout.tv_sec = 3;
-		timeout.tv_usec = 0;
+#ifdef _WIN32
+		if(setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout)) < 0)
+#else
 		if(setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(struct timeval)) < 0)
+#endif
 		{
 			PRINT_SOCKET_ERROR("setsockopt");
 		}
-		timeout.tv_sec = 3;
-		timeout.tv_usec = 0;
+#ifdef _WIN32
+		if(setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout)) < 0)
+#else
 		if(setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(struct timeval)) < 0)
+#endif
 		{
 			PRINT_SOCKET_ERROR("setsockopt");
 		}
@@ -229,19 +309,40 @@ SOCKET connecthostport(const char * host, unsigned short port,
 		while(n < 0 && (errno == EINTR || errno == EINPROGRESS))
 		{
 			socklen_t len;
-			fd_set wset;
 			int err;
+#ifdef USE_POLL
+			struct pollfd pfd = {s, POLLOUT, 0};
+#ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
+			n = poll(&pfd, 1, MINIUPNPC_CONNECT_TIMEOUT_IN_MS);
+#else
+			n = poll(&pfd, 1, -1);
+#endif
+			if(n == 1 && pfd.revents & POLLERR) {
+				/* remote end closed socket */
+				n = -2;
+				fprintf(stderr, "poll: POLLERR on socket\n");
+				break;
+			}
+#else /* #ifdef USE_POLL */
+			fd_set wset;
 			FD_ZERO(&wset);
+			if(!is_socket_in_fd_set_range(s)) {
+				n = -2;
+				break;
+			}
 			FD_SET(s, &wset);
 #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
-			timeout.tv_sec = 3;
-			timeout.tv_usec = 0;
 			n = select(s + 1, NULL, &wset, NULL, &timeout);
 #else
 			n = select(s + 1, NULL, &wset, NULL, NULL);
 #endif
-			if(n == -1 && errno == EINTR)
-				continue;
+#endif /* #ifdef USE_POLL */
+			if(n < 0) {
+				if (errno == EINTR)
+					continue;	/* try again */
+				else
+					break; /* EBADF, EFAULT, EINVAL */
+			}
 #ifdef MINIUPNPC_SET_SOCKET_TIMEOUT
 			if(n == 0) {
 				errno = ETIMEDOUT;
@@ -249,8 +350,6 @@ SOCKET connecthostport(const char * host, unsigned short port,
 				break;
 			}
 #endif
-			/*len = 0;*/
-			/*n = getpeername(s, NULL, &len);*/
 			len = sizeof(err);
 			if(getsockopt(s, SOL_SOCKET, SO_ERROR, &err, &len) < 0) {
 				PRINT_SOCKET_ERROR("getsockopt");
@@ -275,7 +374,8 @@ SOCKET connecthostport(const char * host, unsigned short port,
 	}
 	if(n < 0)
 	{
-		PRINT_SOCKET_ERROR("connect");
+		if(n != -2)
+			PRINT_SOCKET_ERROR("connect");
 		closesocket(s);
 		return INVALID_SOCKET;
 	}

@@ -1,5 +1,29 @@
-$Id: Changelog.txt,v 1.279 2025/03/29 18:09:00 nanard Exp $
+$Id: Changelog.txt,v 1.281 2025/05/26 22:56:38 nanard Exp $
 miniUPnP client Changelog.
+
+2026/05/14:
+  fix build with cmake under DragonFly BSD
+
+2026/04/04:
+  support C23 / glibc 2.43 strstr/strchr returning const char *
+
+2026/03/24:
+  fix: build_absolute_url if if_indextoname() returns NULL
+
+2026/02/05:
+  dllwrap is deprecated : use gcc -shared for DLL build
+
+2025/11/29:
+  Fix Windows socket timeout handling in connecthostport.c
+  Use `poll()` where possible + Fix `FD_SET` crash bug
+
+2025/07/07:
+  fix build with C++ compilers
+
+VERSION 2.3.3 : released 2025/05/27
+
+2025/05/25:
+  define WIN32_LEAN_AND_MEAN
 
 2025/03/29:
   fix a bug in ssdpDiscoverDevices() that has been there since 2010/04/05
