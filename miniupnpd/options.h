@@ -83,6 +83,12 @@ enum upnpconfigoptions {
 #ifdef ENABLE_UPNPPINHOLE
 	UPNPLEASEFILE6,			/*!< lease_file v6 */
 #endif
+#ifdef ENABLE_AURASYNC
+	UPNPENABLEAURASYNC,
+#endif
+#ifdef ENABLE_NVGFN
+	UPNPENABLENVGFN,
+#endif
 #endif
 	UPNPMINISSDPDSOCKET,	/*!< minissdpdsocket */
 #ifdef IGD_V2

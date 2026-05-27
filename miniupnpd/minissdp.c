@@ -216,7 +216,7 @@ OpenAndConfSSDPReceiveSocket(int ipv6)
 	{
 		syslog(LOG_WARNING, "setsockopt(udp, SO_REUSEPORT): %m");
 	}
-#endif /* SO_REUSEPORT */
+#endif
 #ifdef IP_RECVIF
 	/* BSD */
 	if(!ipv6) {
@@ -649,6 +649,9 @@ static struct {
 #endif
 #ifdef ENABLE_6FC_SERVICE
 	{"urn:schemas-upnp-org:service:WANIPv6FirewallControl:", 1, uuidvalue_wcd},
+#endif
+#ifdef ENABLE_NVGFN
+	{"urn:nvidia-com:service:GeForceNow:", 1, uuidvalue_igd},
 #endif
 #else /* IGD_V2 */
 	/* IGD v1 */

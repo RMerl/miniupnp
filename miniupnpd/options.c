@@ -81,6 +81,12 @@ static const struct {
 	{ UPNPENABLENATPMP, "enable_natpmp"},
 	{ UPNPENABLENATPMP, "enable_pcp_pmp"},
 #endif
+#ifdef ENABLE_AURASYNC
+	{ UPNPENABLEAURASYNC, "enable_aurasync"},
+#endif
+#ifdef ENABLE_NVGFN
+	{ UPNPENABLENVGFN, "enable_nvgfn"},
+#endif
 #ifdef ENABLE_PCP
 	{ UPNPPCPMINLIFETIME, "min_lifetime"},
 	{ UPNPPCPMAXLIFETIME, "max_lifetime"},

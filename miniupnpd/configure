@@ -74,6 +74,8 @@ case "$argv" in
 		OS_VERSION=$(echo $argv | cut -d= -f2) ;;
 	--host-machine=*)
 		OS_MACHINE=$(echo $argv | cut -d= -f2) ;;
+	--aurasync) AURASYNC=1 ;;
+	--nvgfn) NVGFN=1 ;;
 	--help|-h)
 		echo "Usage: $0 [options]"
 		echo " --help                Show this help"
@@ -237,6 +239,14 @@ if [ -d ../asuswebstorage ]; then
 if [ -f ./os.openembedded ]; then
 	OS_NAME=OpenEmbedded
 	OS_VERSION=$(cat ./os.openembedded)
+fi
+
+# Asuswrt
+if [ -d ../asuswebstorage ] || [ -f ../shared/version.h ]; then
+	OS_NAME=AsusWRT
+	OS_VERSION=$(cat ../shared/version.h | grep RT_SERIALNO | cut -d'"' -f 2)
+	OS_URL="http://www.asus.com/"
+	PKG_CONFIG=
 fi
 
 else
@@ -579,6 +589,21 @@ case $OS_NAME in
 		FW=iptables
 		;;
 	AsusWRT)
+		OS_FAMILY=Linux
+		OS_URL=http://www.asus.com/ # ASUS
+		cat ../shared/version.h >> ${CONFIGFILE} # ASUS
+		echo "" >> ${CONFIGFILE}
+		echo "#ifdef LINUX26" >> ${CONFIGFILE}
+		echo "#define USE_IFACEWATCHER 1" >> ${CONFIGFILE}
+		echo "#endif" >> ${CONFIGFILE}
+		HAVE_IP_MREQN=1 #Merlin
+		echo "#define LEASEFILE_USE_REMAINING_TIME 1" >> ${CONFIGFILE} #Merlin
+		echo "#define USE_GETIFADDRS 1" >> ${CONFIGFILE}
+		echo "#define LIB_UUID" >> ${CONFIGFILE}
+		FW=iptables
+		HTTPS=
+		;;
+	AsusWRT)
 		echo "#define USE_NETFILTER 1" >> ${CONFIGFILE}
 		echo "" >> ${CONFIGFILE}
 		echo "#ifdef LINUX26" >> ${CONFIGFILE}
@@ -669,6 +694,7 @@ case $FW in
 			echo "LDFLAGS += -L${IPTABLESPATH}/libiptc/" >> ${CONFIG_MK}
 			if [ "$OS_NAME" != "OpenWrt" ]; then
 				IPTABLESVERSION=`grep "\#define VERSION" ${IPTABLESPATH}/config.h | tr -d \" |cut -d" " -f3`
+				echo "ver: $IPTABLESVERSION - path: ${IPTABLESPATH}"
 				echo "detected libiptc version $IPTABLESVERSION"
 				echo "# detected libiptc version $IPTABLESVERSION" >> ${CONFIG_MK}
 				IPTVER1=`echo $IPTABLESVERSION | cut -d. -f1`
@@ -893,6 +919,16 @@ echo "" >> ${CONFIGFILE}
 echo "/* Comment the following line to disable NAT-PMP operations */" >> ${CONFIGFILE}
 echo "#define ENABLE_NATPMP" >> ${CONFIGFILE}
 echo "" >> ${CONFIGFILE}
+
+if [ -n "$AURASYNC" ]; then
+	echo "#define ENABLE_AURASYNC" >> ${CONFIGFILE}
+	echo "" >> ${CONFIGFILE}
+fi
+
+if [ -n "$NVGFN" ]; then
+	echo "#define ENABLE_NVGFN" >> ${CONFIGFILE}
+	echo "" >> ${CONFIGFILE}
+fi
 
 echo "/* Comment the following line to disable PCP operations */" >> ${CONFIGFILE}
 echo "#define ENABLE_PCP" >> ${CONFIGFILE}

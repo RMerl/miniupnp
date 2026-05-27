@@ -20,7 +20,7 @@
 
 #include <linux/version.h>
 
-#include "config.h"
+#include "../config.h"
 
 #ifdef IPTABLES_143
 /* IPTABLES API version >= 1.4.3 */
@@ -33,8 +33,8 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
 #define LIST_POISON2  ((void *) 0x00200200 )
 
-#if 1
-#include "../../iptables-1.4.x/include/net/netfilter/nf_nat.h"
+#if 0
+#include <linux/netfilter/nf_nat.h>
 #else
 #include "tiny_nf_nat.h"
 #endif
@@ -46,7 +46,7 @@
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)
 #include <linux/netfilter_ipv4/ip_nat.h>
 #else
-#if 1
+#if 0
 #include <linux/netfilter/nf_nat.h>
 #else
 #include "tiny_nf_nat.h"
