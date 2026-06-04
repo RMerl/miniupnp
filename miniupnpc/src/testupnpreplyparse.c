@@ -1,7 +1,7 @@
 /* $Id: testupnpreplyparse.c,v 1.4 2014/01/27 11:45:19 nanard Exp $ */
 /* MiniUPnP project
- * http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
- * (c) 2006-2017 Thomas Bernard
+ * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
+ * (c) 2006-2026 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 #include <stdio.h>
@@ -57,18 +57,31 @@ int main(int argc, char * * argv)
 	FILE * f;
 	char * buffer;
 	long l;
+	int i;
 	int ok;
+	int add_null_terminator = 0;
+	const char * name_value_file = NULL;
 
-	if(argc<2)
-	{
-		fprintf(stderr, "Usage: %s file.xml [file.namevalues]\n", argv[0]);
+	if(argc<2 || 0 == strcmp("--help", argv[1]) || 0 == strcmp("-h", argv[1])) {
+		fprintf(stderr, "Usage: %s [--nullterminate] file.xml [file.namevalues]\n", argv[0]);
 		return 1;
 	}
-	f = fopen(argv[1], "r");
-	if(!f)
-	{
-		fprintf(stderr, "Error : can not open file %s\n", argv[1]);
-		return 2;
+	for(i = 1; i < argc; i++) {
+		if(0 == strcmp(argv[i], "--nullterminate")) {
+			add_null_terminator = 1;
+		} else if(f == NULL) {
+			f = fopen(argv[i], "r");
+			if(!f)
+			{
+				fprintf(stderr, "Error : can not open file %s\n", argv[1]);
+				return 2;
+			}
+		} else if(name_value_file == NULL) {
+			name_value_file = argv[i];
+		} else {
+			fprintf(stderr, "unrecognized argument %s\n", argv[i]);
+			return 1;
+		}
 	}
 	if(fseek(f, 0, SEEK_END) < 0) {
 		perror("fseek");
@@ -83,7 +96,7 @@ int main(int argc, char * * argv)
 		perror("fseek");
 		return 1;
 	}
-	buffer = malloc(l + 1);
+	buffer = malloc(l + (add_null_terminator ? 1 : 0));
 	if(buffer == NULL) {
 		fprintf(stderr, "Error: failed to allocate %ld bytes\n", l+1);
 		return 1;
@@ -91,13 +104,15 @@ int main(int argc, char * * argv)
 	l = fread(buffer, 1, l, f);
 	fclose(f);
 	f = NULL;
-	buffer[l] = '\0';
-	if(argc > 2)
+	if(add_null_terminator) {
+		buffer[l] = '\0';
+	}
+	if(name_value_file)
 	{
-		f = fopen(argv[2], "r");
+		f = fopen(name_value_file, "r");
 		if(!f)
 		{
-			fprintf(stderr, "Error : can not open file %s\n", argv[2]);
+			fprintf(stderr, "Error : can not open file %s\n", name_value_file);
 			return 2;
 		}
 	}
