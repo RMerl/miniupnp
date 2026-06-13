@@ -1,7 +1,7 @@
 /* $Id: minissdpd.c,v 1.61 2021/11/04 23:27:28 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
- * (c) 2007-2024 Thomas Bernard
+ * (c) 2007-2026 Thomas Bernard
  * website : http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
@@ -318,6 +318,8 @@ updateDevice(const struct header * headers, time_t t)
 			/* update Location ! */
 			if(headers[HEADER_LOCATION].l > p->headers[HEADER_LOCATION].l)
 			{
+				char * pc;
+				int i;
 				struct device * tmp;
 				tmp = realloc(p, sizeof(struct device)
 				    + headers[0].l+headers[1].l+headers[2].l);
@@ -330,10 +332,17 @@ updateDevice(const struct header * headers, time_t t)
 				}
 				p = tmp;
 				*pp = p;
+				p->headers[HEADER_LOCATION].l = headers[HEADER_LOCATION].l;
+				/* update the pointer to the new memory location */
+				pc = p->data;
+				for (i = 0; i < 3; i++)
+				{
+					p->headers[i].p = pc;
+					pc += p->headers[i].l;
+				}
 			}
 			memcpy(p->data + p->headers[0].l + p->headers[1].l,
 			       headers[2].p, headers[2].l);
-			/* TODO : check p->headers[HEADER_LOCATION].l */
 			return 0;
 		}
 		pp = &p->next;
