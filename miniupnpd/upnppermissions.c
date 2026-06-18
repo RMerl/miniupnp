@@ -77,7 +77,7 @@ unescape_char(const char * s, int * seqlen)
 		case '?':  c = '?';  break;
 		*/
 		case 'x':
-			if(isxdigit(s[1]) && isxdigit(s[2]))
+			if(isxdigit((unsigned char)s[1]) && isxdigit((unsigned char)s[2]))
 			{
 				c = (hex2chr(s[1]) << 4) + hex2chr(s[2]);
 				len = 4;
@@ -103,11 +103,11 @@ unescape_char(const char * s, int * seqlen)
 static const char *
 get_sep(const char * s)
 {
-	if(!isspace(*s))
+	if(!isspace((unsigned char)*s))
 		return NULL;
 	do
 		s++;
-	while(isspace(*s));
+	while(isspace((unsigned char)*s));
 	return (char *) s;
 }
 
@@ -117,7 +117,7 @@ get_ushort(const char * s, u_short * val)
 	char * end;
 	unsigned long val_ul;
 
-	if(!isdigit(*s))
+	if(!isdigit((unsigned char)*s))
 		return NULL;
 	val_ul = strtoul(s, &end, 10);
 	if(val_ul > 65535)
@@ -154,11 +154,11 @@ get_addr(const char * s, struct in_addr * addr, unsigned int * dot_cnt)
 	size_t i;
 	char buf[64];
 
-	if(!isdigit(*s))
+	if(!isdigit((unsigned char)*s))
 		return NULL;
 
 	*dot_cnt = 0;
-	for(i = 0; isdigit(s[i]) || s[i] == '.';)
+	for(i = 0; isdigit((unsigned char)s[i]) || s[i] == '.';)
 	{
 		if(s[i] == '.')
 			(*dot_cnt)++;
@@ -193,7 +193,7 @@ get_next_token(const char * s, char ** token, int raw)
 	else
 		deli = 0;
 	/* find the end */
-	for(len = 0; !iseol(s[len]) && (deli ? s[len] != deli : !isspace(s[len]));
+	for(len = 0; !iseol(s[len]) && (deli ? s[len] != deli : !isspace((unsigned char)s[len]));
 	    len++)
 		if(s[len] == '\\')
 		{
@@ -273,7 +273,7 @@ read_permission_line(struct upnpperm * perm,
 	/* zero memory : see https://github.com/miniupnp/miniupnp/issues/652 */
 	memset(perm, 0, sizeof(struct upnpperm));
 
-	while(isspace(*p))
+	while(isspace((unsigned char)*p))
 		p++;
 
 	/* first token: (allow|deny) */
