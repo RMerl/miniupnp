@@ -30,7 +30,7 @@ typedef unsigned long uint32_t;
 #endif
 
 /* List of IP address blocks which are private / reserved and therefore not suitable for public external IP addresses */
-#define IP(a, b, c, d) (((a) << 24) + ((b) << 16) + ((c) << 8) + (d))
+#define IP(a, b, c, d) ((uint32_t)(((a) << 24) + ((b) << 16) + ((c) << 8) + (d)))
 #define MSK(m) (32-(m))
 static const struct { uint32_t address; uint32_t rmask; } reserved[] = {
 	{ IP(  0,   0,   0, 0), MSK( 8) }, /* RFC1122 "This host on this network" */
